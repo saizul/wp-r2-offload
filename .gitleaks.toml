@@ -1,0 +1,7 @@
+# The AWS SigV4 test suite uses AWS's published example credentials and session token.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public AWS SigV4 test vectors"
+paths = ['''tests/Fixtures/aws-sigv4/''']

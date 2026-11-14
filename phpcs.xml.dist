@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<ruleset name="R2 Offload">
+	<description>WordPress Coding Standards for the plugin code.</description>
+
+	<file>wp-r2-offload.php</file>
+	<file>uninstall.php</file>
+	<file>includes</file>
+	<file>src</file>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/tests/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+	<arg name="parallel" value="8"/>
+
+	<config name="minimum_wp_version" value="6.0"/>
+	<config name="testVersion" value="7.4-"/>
+
+	<rule ref="WordPress">
+		<!-- Classes are autoloaded with PSR-4, so file names follow class names. -->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!-- src/ is a WordPress-free library: exception messages are never printed and WordPress helpers are unavailable. -->
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<exclude-pattern>/src/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>/src/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions">
+		<exclude-pattern>/src/*</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="wp-r2-offload"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="wp_r2_offload"/>
+				<element value="Saizul\R2Offload"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

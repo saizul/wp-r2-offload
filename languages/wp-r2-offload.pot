@@ -1,0 +1,233 @@
+# Copyright (C) 2026 Saizul Amin
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: R2 Offload 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/saizul/wp-r2-offload/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"X-Domain: wp-r2-offload\n"
+
+#. Plugin Name of the plugin
+#: wp-r2-offload.php includes/Admin/SettingsPage.php:57 includes/Admin/SettingsPage.php:57 includes/Admin/SettingsPage.php:141
+msgid "R2 Offload"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: wp-r2-offload.php
+msgid "https://github.com/saizul/wp-r2-offload"
+msgstr ""
+
+#. Description of the plugin
+#: wp-r2-offload.php
+msgid "Offload the media library to Cloudflare R2: uploads every image size, serves media from your custom domain, handles srcset, edits and deletes, and bulk-offloads existing files with WP-CLI."
+msgstr ""
+
+#. Author of the plugin
+#: wp-r2-offload.php
+msgid "Saizul Amin"
+msgstr ""
+
+#. Author URI of the plugin
+#: wp-r2-offload.php
+msgid "https://saizul.com"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:68
+msgid "Settings"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:88
+msgid "Not offloaded."
+msgstr ""
+
+#. translators: 1: number of files, 2: bucket
+#: includes/Admin/SettingsPage.php:90
+#, php-format
+msgid "%1$d file in bucket %2$s."
+msgid_plural "%1$d files in bucket %2$s."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Admin/SettingsPage.php:92
+msgid "Local copies removed."
+msgstr ""
+
+#. translators: %s: error message
+#: includes/Admin/SettingsPage.php:96
+#, php-format
+msgid "Last error: %s"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:99
+msgid "Cloudflare R2"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:114
+msgid "Account ID"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:114
+msgid "32 characters, shown in the Cloudflare dashboard under R2."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:115
+msgid "Access key ID"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:115
+msgid "From an R2 API token with Object Read & Write permission for the bucket."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:116
+msgid "Secret access key"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:116
+msgid "Stored encrypted. Prefer the wp-config.php constant."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:117
+msgid "Bucket"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:118
+msgid "Jurisdiction"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:118
+msgid "Only for buckets created in the EU or FedRAMP jurisdiction."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:119
+msgid "Custom S3 endpoint"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:119
+msgid "Leave empty for R2. Overrides the account endpoint, for example for a local S3-compatible test server."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:120
+msgid "Public URL"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:120
+msgid "Custom domain connected to the bucket (recommended) or its r2.dev URL, for example https://media.example.com"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:121
+msgid "Object key prefix"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:121
+msgid "Keys mirror the uploads folder below this prefix. {site_id} is replaced on multisite."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:122
+msgid "Offload new uploads"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:123
+msgid "Serve media from the public URL"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:124
+msgid "Remove local files after upload"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:124
+msgid "Saves disk space. Run \"wp r2 restore --all\" before deactivating the plugin."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:125
+msgid "Cache-Control"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:126
+msgid "Multipart from (MiB)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:126
+msgid "Files at least this large are uploaded in parts."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:127
+msgid "Part size (MiB)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:127
+msgid "At least 5 MiB."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:136 includes/Admin/SettingsPage.php:235 includes/Admin/SettingsPage.php:252
+msgid "You are not allowed to manage R2 Offload."
+msgstr ""
+
+#. translators: 1: offloaded attachments, 2: all attachments
+#: includes/Admin/SettingsPage.php:148
+#, php-format
+msgid "%1$d of %2$d attachments are offloaded. Offload the rest with \"wp r2 offload\"."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:164
+msgid "Connection test"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:165
+msgid "Uploads, checks and deletes a small test object below the key prefix."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:169
+msgid "Test connection"
+msgstr ""
+
+#. translators: %s: constant name
+#: includes/Admin/SettingsPage.php:193
+#, php-format
+msgid "Defined by %s in wp-config.php."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:199
+msgid "Saved (encrypted)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:201
+msgid "Remove"
+msgstr ""
+
+#. translators: %s: constant name
+#: includes/Admin/SettingsPage.php:204
+#, php-format
+msgid "Leave empty to keep the saved value. Constant: %s"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:209
+msgid "Default"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:241
+msgid "Settings saved."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:274
+msgid "The test object was uploaded but could not be found."
+msgstr ""
+
+#. translators: %s: bucket
+#: includes/Admin/SettingsPage.php:277
+#, php-format
+msgid "Connected: uploaded, read and deleted a test object in bucket %s."
+msgstr ""
+
+#. translators: %s: error message
+#: includes/Admin/SettingsPage.php:280
+#, php-format
+msgid "Connection failed: %s"
+msgstr ""
+
+#: wp-r2-offload.php:26
+msgid "R2 Offload requires PHP 7.4 or newer."
+msgstr ""

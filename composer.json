@@ -1,0 +1,64 @@
+{
+    "name": "saizul/wp-r2-offload",
+    "description": "Offload the WordPress media library to Cloudflare R2 with a dependency-free AWS SigV4 client: all image sizes, URL and srcset rewriting, multipart uploads and resumable WP-CLI bulk offload.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "keywords": [
+        "wordpress",
+        "cloudflare",
+        "r2",
+        "s3",
+        "media",
+        "offload",
+        "cdn",
+        "sigv4"
+    ],
+    "homepage": "https://github.com/saizul/wp-r2-offload",
+    "authors": [
+        {
+            "name": "Saizul Amin",
+            "homepage": "https://saizul.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/saizul/wp-r2-offload/issues",
+        "source": "https://github.com/saizul/wp-r2-offload"
+    },
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpunit/phpunit": "^9.6",
+        "squizlabs/php_codesniffer": "^3.9",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Saizul\\R2Offload\\WP\\": "includes/",
+            "Saizul\\R2Offload\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Saizul\\R2Offload\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "lint": "find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l",
+        "phpcs": "phpcs",
+        "phpcbf": "phpcbf",
+        "make-pot": "php bin/make-pot.php"
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "7.4.33"
+        },
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

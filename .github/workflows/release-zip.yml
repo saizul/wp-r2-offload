@@ -1,0 +1,80 @@
+name: Release zip
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  SLUG: wp-r2-offload
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+
+      - name: Check the version matches the tag
+        if: github.event_name == 'release'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          header=$(sed -n 's/^ \* Version: *//p' "$SLUG.php" | tr -d '[:space:]')
+          stable=$(sed -n 's/^Stable tag: *//p' readme.txt | tr -d '[:space:]')
+          echo "tag=$tag header=$header stable=$stable"
+          test "$tag" = "$header"
+          test "$tag" = "$stable"
+
+      - name: Build the plugin folder
+        run: |
+          mkdir -p "build/$SLUG"
+          rsync -a --exclude-from=.distignore ./ "build/$SLUG/"
+          # The plugin has no runtime Composer dependencies; its own autoloader is used.
+          test ! -e "build/$SLUG/vendor"
+          test ! -e "build/$SLUG/tests"
+          test -e "build/$SLUG/languages/$SLUG.pot"
+          find "build/$SLUG" -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+          find "build/$SLUG" -type f | sort
+
+      - name: Smoke test the autoloader and the signer
+        run: |
+          php -r '
+            define("ABSPATH", __DIR__);
+            spl_autoload_register(function ($c) {
+              $p = ["Saizul\\R2Offload\\WP\\" => "build/wp-r2-offload/includes/", "Saizul\\R2Offload\\" => "build/wp-r2-offload/src/"];
+              foreach ($p as $prefix => $dir) {
+                if (strpos($c, $prefix) === 0) { require $dir . str_replace("\\", "/", substr($c, strlen($prefix))) . ".php"; return; }
+              }
+            });
+            $s = new Saizul\R2Offload\Signer\SignatureV4(new Saizul\R2Offload\Signer\Credentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"), "us-east-1", "s3");
+            $url = $s->presign("GET", "https://examplebucket.s3.amazonaws.com/test.txt", 86400, new DateTimeImmutable("2013-05-24T00:00:00Z"));
+            exit(substr($url, -64) === "aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404" ? 0 : 1);
+          '
+
+      - name: Create the zip
+        run: |
+          cd build
+          zip -r -q "../$SLUG.zip" "$SLUG"
+          cd ..
+          unzip -l "$SLUG.zip" | tail -n 1
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SLUG }}
+          path: ${{ env.SLUG }}.zip
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" "$SLUG.zip" --clobber
