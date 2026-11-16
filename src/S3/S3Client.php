@@ -224,6 +224,28 @@ final class S3Client {
 	 * @throws S3Exception On failure.
 	 */
 	public function list_objects( string $prefix = '', int $max_keys = 1000, string $continuation = '' ): array {
+		$page = $this->list_object_metas( $prefix, $max_keys, $continuation );
+		$keys = array();
+		foreach ( $page['objects'] as $meta ) {
+			$keys[ $meta->key ] = $meta->size;
+		}
+
+		return array(
+			'keys' => $keys,
+			'next' => $page['next'],
+		);
+	}
+
+	/**
+	 * List objects under a prefix with size, ETag and LastModified (ListObjectsV2).
+	 *
+	 * @param string $prefix Prefix.
+	 * @param int    $max_keys Page size (1 to 1000).
+	 * @param string $continuation Continuation token from the previous page.
+	 * @return array{objects:ObjectMeta[],next:string} Objects in key order, and the next continuation token ("" at the end).
+	 * @throws S3Exception On failure.
+	 */
+	public function list_object_metas( string $prefix = '', int $max_keys = 1000, string $continuation = '' ): array {
 		$query = 'list-type=2&max-keys=' . max( 1, min( 1000, $max_keys ) );
 		if ( '' !== $prefix ) {
 			$query .= '&prefix=' . rawurlencode( $prefix );
@@ -233,18 +255,27 @@ final class S3Client {
 		}
 		$response = $this->send( new Request( 'GET', $this->endpoint->bucket_url( $query ) ) );
 		$doc      = Xml::parse( $response->body() );
-		$keys     = array();
 		if ( null === $doc ) {
 			throw new S3Exception( 'InvalidResponse', 'ListObjectsV2 did not return XML.', $response->status() );
 		}
+		$objects = array();
 		foreach ( Xml::children( $doc, 'Contents' ) as $item ) {
-			$keys[ Xml::text( $item, 'Key' ) ] = (int) Xml::text( $item, 'Size' );
+			$objects[] = new ObjectMeta(
+				Xml::text( $item, 'Key' ),
+				(int) Xml::text( $item, 'Size' ),
+				Xml::text( $item, 'ETag' ),
+				'',
+				Xml::text( $item, 'LastModified' )
+			);
 		}
 		$next = 'true' === Xml::text( $doc, 'IsTruncated' ) ? Xml::text( $doc, 'NextContinuationToken' ) : '';
+		if ( '' !== $continuation && $next === $continuation ) {
+			throw new S3Exception( 'InvalidResponse', 'ListObjectsV2 returned the same continuation token twice.', $response->status() );
+		}
 
 		return array(
-			'keys' => $keys,
-			'next' => $next,
+			'objects' => $objects,
+			'next'    => $next,
 		);
 	}
 

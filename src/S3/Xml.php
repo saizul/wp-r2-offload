@@ -60,6 +60,10 @@ final class Xml {
 	/**
 	 * Children with a local name.
 	 *
+	 * Elements in the default namespace (as in every S3 response) are
+	 * returned once, not again for the namespace; prefixed namespaces are
+	 * searched too.
+	 *
 	 * @param \SimpleXMLElement $node Node.
 	 * @param string            $name Local name.
 	 * @return \SimpleXMLElement[]
@@ -67,8 +71,11 @@ final class Xml {
 	public static function children( \SimpleXMLElement $node, string $name ): array {
 		$found = array();
 		$sets  = array( $node->children() );
-		foreach ( $node->getNamespaces( true ) as $ns ) {
-			$sets[] = $node->children( $ns );
+		foreach ( $node->getNamespaces( true ) as $prefix => $ns ) {
+			// Children in the default namespace are already in the plain set.
+			if ( '' !== $prefix ) {
+				$sets[] = $node->children( $ns );
+			}
 		}
 		foreach ( $sets as $set ) {
 			foreach ( $set as $child ) {

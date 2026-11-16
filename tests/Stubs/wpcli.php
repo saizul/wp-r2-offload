@@ -16,10 +16,20 @@ namespace {
 		public static $log = array();
 		/** @var array<int,mixed> */
 		public static $items = array();
+		/** @var bool Answer to confirm(). */
+		public static $confirm = true;
 
 		public static function reset(): void {
-			self::$log   = array();
-			self::$items = array();
+			self::$log     = array();
+			self::$items   = array();
+			self::$confirm = true;
+		}
+
+		public static function confirm( $question, $assoc_args = array() ) {
+			self::$log[] = array( 'confirm', $question );
+			if ( empty( $assoc_args['yes'] ) && ! self::$confirm ) {
+				throw new WpCliExit( 'Not confirmed.' );
+			}
 		}
 
 		public static function error( $message ) {

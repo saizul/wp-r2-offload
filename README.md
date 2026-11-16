@@ -36,6 +36,9 @@ Plugin slug: `wp-r2-offload` - display name: *R2 Offload*.
   continues where it stopped: `wp r2 offload --batch=100`.
 - **Verification**: `wp r2 verify` sends HEAD for every object and compares sizes;
   `--fix` uploads missing or different objects again.
+- **Orphan clean-up**: `wp r2 orphans` lists objects in the bucket that no
+  attachment refers to any more and can delete them, with protection for recent
+  uploads and shared prefixes.
 - **Credentials in wp-config.php** (recommended): nothing secret is stored in the
   database. Credentials entered on the settings screen are stored encrypted.
 - Connection test on the settings screen, R2 status in the attachment details.
@@ -131,11 +134,42 @@ wp r2 offload --dry-run            # show what would be uploaded
 wp r2 offload --reset              # start again from the first attachment
 wp r2 verify                       # HEAD every object and compare sizes
 wp r2 verify 123 456 --fix         # re-upload missing or different objects
+wp r2 orphans                      # objects no attachment refers to (dry run)
+wp r2 orphans --delete             # delete them after a confirmation
 wp r2 restore --all                # download removed local copies again
 ```
 
 Progress of `wp r2 offload` is stored in the `wp_r2_offload_bulk_state` option after
 every attachment. Interrupted multipart uploads continue from their last part.
+
+## Orphaned objects
+
+Objects can stay in the bucket after their attachment is gone: attachments
+deleted while the plugin was inactive, deletes that failed, or files of old image
+edits. `wp r2 orphans` lists the bucket under the object key prefix
+(ListObjectsV2) and compares every key with the files recorded in the
+`_wp_r2_offload` meta of all attachments.
+
+```bash
+wp r2 orphans                          # table of orphaned keys, sizes and dates
+wp r2 orphans --format=json            # or csv, yaml, count
+wp r2 orphans --min-age=72             # only objects older than 72 hours
+wp r2 orphans --delete                 # asks before deleting
+wp r2 orphans --delete --yes --limit=1000
+```
+
+- Nothing is deleted without `--delete`, and `--delete` asks for confirmation
+  unless `--yes` is given.
+- Objects modified less than `--min-age` hours ago (default 24) or without a
+  LastModified date are never reported, so uploads in progress are safe.
+- Only the key prefix is listed; other objects in the bucket are not touched.
+  Keys ending in `/` (folder markers) are ignored.
+- Deleting is refused when the prefix may be shared: an empty prefix, or a
+  multisite network whose prefix has no `{site_id}`.
+- References are read again right before deleting. Records that name another
+  bucket still count, so a copied bucket is not emptied by mistake.
+- Use the `wp_r2_offload_orphan_keep` filter to protect other files under the
+  prefix.
 
 ## Removing local files
 
@@ -155,6 +189,7 @@ files of the attachment are in the bucket (after WordPress has saved the metadat
 | Hook | Type | Purpose |
 | ---- | ---- | ------- |
 | `wp_r2_offload_should_offload` | filter | Return false to keep an attachment local (`$offload, $attachment_id`) |
+| `wp_r2_offload_orphan_keep` | filter | Return true to keep an unreferenced object out of `wp r2 orphans` (`$keep, $key, $meta`) |
 | `wp_r2_offload_delete_remote` | filter | Return false to keep objects when an attachment is deleted |
 | `wp_r2_offload_capability` | filter | Capability for the settings screen (default `manage_options`) |
 | `wp_r2_offload_http_args` | filter | Arguments for `wp_remote_request()` (do not change signed headers) |

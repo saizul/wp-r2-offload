@@ -132,6 +132,26 @@ final class S3ClientTest extends TestCase {
 		self::assertSame( '', $this->client()->list_objects()['next'] );
 	}
 
+	public function test_list_object_metas(): void {
+		$this->http->queue( 200, '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>true</IsTruncated><NextContinuationToken>t2</NextContinuationToken><Contents><Key>p/a &amp; b.jpg</Key><LastModified>2026-11-01T10:00:00.000Z</LastModified><ETag>&quot;abc&quot;</ETag><Size>42</Size></Contents></ListBucketResult>' );
+		$page = $this->client()->list_object_metas( 'p/' );
+
+		self::assertSame( 't2', $page['next'] );
+		self::assertCount( 1, $page['objects'] );
+		self::assertSame( 'p/a & b.jpg', $page['objects'][0]->key );
+		self::assertSame( 42, $page['objects'][0]->size );
+		self::assertSame( 'abc', $page['objects'][0]->etag );
+		self::assertSame( '2026-11-01T10:00:00.000Z', $page['objects'][0]->last_modified );
+	}
+
+	public function test_list_object_metas_rejects_a_repeated_continuation_token(): void {
+		$this->http->queue( 200, '<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>same</NextContinuationToken></ListBucketResult>' );
+
+		$this->expectException( S3Exception::class );
+		$this->expectExceptionMessage( 'same continuation token twice' );
+		$this->client()->list_object_metas( '', 1000, 'same' );
+	}
+
 	public function test_multipart_operations(): void {
 		$this->http
 			->queue( 200, '<?xml version="1.0" encoding="UTF-8"?><InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>media</Bucket><Key>big.mp4</Key><UploadId>UP/1+x</UploadId></InitiateMultipartUploadResult>' )
