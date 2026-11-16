@@ -36,6 +36,7 @@ The plugin includes a small S3 client with its own AWS Signature Version 4 imple
 * `wp r2 offload --batch=100` - offload existing media, resumable
 * `wp r2 status` - configuration and progress
 * `wp r2 verify --fix` - check every object and re-upload problems
+* `wp r2 orphans --delete` - find and remove bucket objects no attachment uses
 * `wp r2 restore --all` - download removed local files
 
 Development happens on GitHub: https://github.com/saizul/wp-r2-offload
@@ -75,6 +76,10 @@ Yes, choose the jurisdiction in the settings or set `WP_R2_OFFLOAD_JURISDICTION`
 2. Bulk offload with WP-CLI.
 
 == Changelog ==
+
+= Unreleased =
+* New: `wp r2 orphans` lists objects in the bucket that no attachment uses and can delete them (dry run by default, recent uploads protected, refused under a shared key prefix).
+* Fix: repeated elements in namespaced S3 XML responses were read twice.
 
 = 0.1.0 =
 * First release: AWS SigV4 S3 client for Cloudflare R2, offload of all attachment files, URL and srcset rewriting, multipart uploads, local file removal and restore, WP-CLI offload/status/verify/restore, encrypted credentials or wp-config.php constants.

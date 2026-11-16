@@ -29,8 +29,11 @@ final class WpStubs {
 	public static $http_responses = array();
 	/** @var array<int,array{0:string,1:array<int,mixed>}> */
 	public static $actions = array();
+	/** @var bool */
+	public static $multisite = false;
 
 	public static function reset(): void {
+		self::$multisite      = false;
 		self::$filters        = array();
 		self::$options        = array();
 		self::$transients     = array();
@@ -234,6 +237,10 @@ function wp_delete_file( $file ) {
 
 function wp_mkdir_p( $dir ) {
 	return is_dir( $dir ) || mkdir( $dir, 0777, true );
+}
+
+function is_multisite() {
+	return WpStubs::$multisite;
 }
 
 function get_current_blog_id() {

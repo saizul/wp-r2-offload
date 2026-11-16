@@ -163,4 +163,118 @@ final class R2CommandTest extends WpTestCase {
 		$this->expectException( WpCliExit::class );
 		$this->command()->restore( array(), array() );
 	}
+
+	/**
+	 * Two attachments offloaded and three unknown objects in the bucket.
+	 */
+	private function bucket_with_orphans(): void {
+		$this->attachment( 10, 'a' );
+		$this->attachment( 11, 'b' );
+		$this->services()->offloader()->offload( 10 );
+		$this->services()->offloader()->offload( 11 );
+		$this->bucket['wp-content/uploads/2026/11/gone.jpg']     = array( 'body' => str_repeat( 'G', 100 ), 'type' => 'image/jpeg', 'cache' => '' );
+		$this->bucket['wp-content/uploads/2026/11/gone-1x1.jpg'] = array( 'body' => 'x', 'type' => 'image/jpeg', 'cache' => '' );
+		$this->bucket['wp-content/uploads/2026/11/fresh.jpg']    = array( 'body' => 'y', 'type' => 'image/jpeg', 'cache' => '', 'mtime' => gmdate( 'Y-m-d\\TH:i:s.000\\Z' ) );
+		$this->bucket['other-tool/backup.sql']                  = array( 'body' => 'z', 'type' => 'text/plain', 'cache' => '' );
+		WP_CLI::reset();
+	}
+
+	public function test_orphans_lists_without_deleting(): void {
+		$this->bucket_with_orphans();
+		$this->command()->orphans( array(), array( 'format' => 'json' ) );
+
+		list( $format, $rows, $fields ) = WP_CLI::$items[0];
+		self::assertSame( 'json', $format );
+		self::assertSame( array( 'key', 'size', 'last_modified' ), $fields );
+		self::assertSame( array( 'wp-content/uploads/2026/11/gone-1x1.jpg', 'wp-content/uploads/2026/11/gone.jpg' ), array_column( $rows, 'key' ) );
+		self::assertContains( 'success: Scanned 9 object(s) under "wp-content/uploads/": 6 referenced, 1 newer than 24 hour(s), 0 kept, 2 orphaned (101 B). Run with --delete to remove them.', $this->lines() );
+		self::assertArrayHasKey( 'wp-content/uploads/2026/11/gone.jpg', $this->bucket );
+		self::assertArrayHasKey( 'other-tool/backup.sql', $this->bucket, 'Objects outside the prefix are not listed.' );
+	}
+
+	public function test_orphans_count_format_and_min_age(): void {
+		$this->bucket_with_orphans();
+		$this->command()->orphans( array(), array( 'format' => 'count', 'min-age' => '0' ) );
+
+		self::assertSame( array( 'line', '3' ), WP_CLI::$log[0] );
+		self::assertSame( array(), WP_CLI::$items );
+	}
+
+	public function test_orphans_delete_after_confirmation(): void {
+		$this->bucket_with_orphans();
+		$this->command()->orphans( array(), array( 'delete' => true ) );
+
+		self::assertContains( 'confirm: Delete 2 object(s) from bucket "media"? This cannot be undone.', $this->lines() );
+		self::assertContains( 'success: Deleted 2 orphaned object(s) (101 B).', $this->lines() );
+		self::assertArrayNotHasKey( 'wp-content/uploads/2026/11/gone.jpg', $this->bucket );
+		self::assertArrayNotHasKey( 'wp-content/uploads/2026/11/gone-1x1.jpg', $this->bucket );
+		self::assertArrayHasKey( 'wp-content/uploads/2026/11/fresh.jpg', $this->bucket );
+		self::assertArrayHasKey( 'wp-content/uploads/2026/11/a-300x200.jpg', $this->bucket );
+		self::assertCount( 8, $this->bucket );
+
+		WP_CLI::reset();
+		$this->command()->orphans( array(), array() );
+		self::assertContains( 'success: Scanned 7 object(s) under "wp-content/uploads/": 6 referenced, 1 newer than 24 hour(s), 0 kept, 0 orphaned (0 B).', $this->lines() );
+	}
+
+	public function test_orphans_delete_declined_keeps_objects(): void {
+		$this->bucket_with_orphans();
+		WP_CLI::$confirm = false;
+		try {
+			$this->command()->orphans( array(), array( 'delete' => true ) );
+			self::fail( 'Expected the command to stop.' );
+		} catch ( WpCliExit $e ) {
+			self::assertSame( 'Not confirmed.', $e->getMessage() );
+		}
+		self::assertArrayHasKey( 'wp-content/uploads/2026/11/gone.jpg', $this->bucket );
+
+		WP_CLI::reset();
+		WP_CLI::$confirm = false;
+		$this->command()->orphans( array(), array( 'delete' => true, 'yes' => true ) );
+		self::assertArrayNotHasKey( 'wp-content/uploads/2026/11/gone.jpg', $this->bucket );
+	}
+
+	public function test_orphans_keep_filter(): void {
+		$this->bucket_with_orphans();
+		add_filter(
+			'wp_r2_offload_orphan_keep',
+			static function ( bool $keep, string $key ): bool {
+				return $keep || false !== strpos( $key, '-1x1' );
+			},
+			10,
+			2
+		);
+		$this->command()->orphans( array(), array( 'delete' => true, 'yes' => true ) );
+
+		self::assertContains( 'success: Deleted 1 orphaned object(s) (100 B).', $this->lines() );
+		self::assertArrayHasKey( 'wp-content/uploads/2026/11/gone-1x1.jpg', $this->bucket );
+	}
+
+	public function test_orphans_refuses_to_delete_under_a_shared_prefix(): void {
+		$this->bucket_with_orphans();
+		WpStubs::$multisite = true;
+		try {
+			$this->command()->orphans( array(), array( 'delete' => true, 'yes' => true ) );
+			self::fail( 'Expected an error.' );
+		} catch ( WpCliExit $e ) {
+			self::assertStringContainsString( 'multisite network and the key prefix has no {site_id}', $e->getMessage() );
+		}
+		self::assertArrayHasKey( 'wp-content/uploads/2026/11/gone.jpg', $this->bucket );
+
+		WP_CLI::reset();
+		$this->command()->orphans( array(), array() );
+		self::assertSame( 'warning', WP_CLI::$log[0][0], 'Listing still works, with a warning.' );
+
+		WP_CLI::reset();
+		$this->constants['WP_R2_OFFLOAD_KEY_PREFIX'] = '';
+		$this->expectException( WpCliExit::class );
+		$this->expectExceptionMessage( 'The object key prefix is empty' );
+		$this->command()->orphans( array(), array( 'delete' => true, 'yes' => true ) );
+	}
+
+	public function test_orphans_rejects_negative_min_age(): void {
+		$this->expectException( WpCliExit::class );
+		$this->expectExceptionMessage( '--min-age must be 0 or more hours.' );
+		$this->command()->orphans( array(), array( 'min-age' => '-1' ) );
+	}
 }

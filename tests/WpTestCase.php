@@ -27,7 +27,7 @@ abstract class WpTestCase extends TestCase {
 	/** @var array<string,mixed> */
 	protected $constants = array();
 
-	/** @var array<string,array{body:string,type:string,cache:string}> Fake bucket: key => object. */
+	/** @var array<string,array{body:string,type:string,cache:string,mtime?:string}> Fake bucket: key => object. */
 	protected $bucket = array();
 
 	/** @var FakeHttpClient */
@@ -130,6 +130,9 @@ abstract class WpTestCase extends TestCase {
 			unset( $this->bucket[ '__mpu__' . $key ] );
 			return new Response( 200, '<CompleteMultipartUploadResult><ETag>"abc-2"</ETag></CompleteMultipartUploadResult>' );
 		}
+		if ( 'GET' === $request->method() && '' === $key && isset( $params['list-type'] ) ) {
+			return $this->fake_list( $params );
+		}
 		switch ( $request->method() ) {
 			case 'PUT':
 				$this->bucket[ $key ] = array( 'body' => $request->body(), 'type' => (string) $request->header( 'Content-Type' ), 'cache' => (string) $request->header( 'Cache-Control' ) );
@@ -144,6 +147,38 @@ abstract class WpTestCase extends TestCase {
 		}
 
 		return new Response( 400 );
+	}
+
+	/**
+	 * ListObjectsV2 over the fake bucket; the continuation token is the last key of the page.
+	 *
+	 * @param array<string,mixed> $params Query parameters.
+	 */
+	private function fake_list( array $params ): Response {
+		$prefix = (string) ( $params['prefix'] ?? '' );
+		$after  = (string) ( $params['continuation-token'] ?? '' );
+		$max    = (int) ( $params['max-keys'] ?? 1000 );
+		$keys   = array_filter(
+			array_map( 'strval', array_keys( $this->bucket ) ),
+			static function ( string $key ) use ( $prefix, $after ): bool {
+				return 0 !== strpos( $key, '__mpu__' ) && 0 === strpos( $key, $prefix ) && ( '' === $after || strcmp( $key, $after ) > 0 );
+			}
+		);
+		sort( $keys, SORT_STRING );
+		$page = array_slice( $keys, 0, $max );
+		$xml  = '<?xml version="1.0" encoding="UTF-8"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">';
+		$xml .= '<IsTruncated>' . ( count( $keys ) > $max ? 'true' : 'false' ) . '</IsTruncated>';
+		if ( count( $keys ) > $max ) {
+			$xml .= '<NextContinuationToken>' . htmlspecialchars( (string) end( $page ), ENT_XML1 ) . '</NextContinuationToken>';
+		}
+		foreach ( $page as $key ) {
+			$xml .= '<Contents><Key>' . htmlspecialchars( $key, ENT_XML1 ) . '</Key>'
+				. '<LastModified>' . ( $this->bucket[ $key ]['mtime'] ?? '2026-01-01T00:00:00.000Z' ) . '</LastModified>'
+				. '<ETag>&quot;' . md5( $this->bucket[ $key ]['body'] ) . '&quot;</ETag>'
+				. '<Size>' . strlen( $this->bucket[ $key ]['body'] ) . '</Size></Contents>';
+		}
+
+		return new Response( 200, $xml . '</ListBucketResult>' );
 	}
 
 	/**
